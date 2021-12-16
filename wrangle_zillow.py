@@ -9,7 +9,7 @@
 
 # ## Imports
 
-# In[1]:
+# In[21]:
 
 
 import numpy as np
@@ -23,6 +23,11 @@ import seaborn as sns
 # default pandas decimal number display format
 pd.options.display.float_format = '{:.2f}'.format
 
+# Split 
+from sklearn.model_selection import train_test_split
+
+# Scale
+from sklearn.preprocessing import MinMaxScaler
 
 # Stats
 import scipy.stats as stats
@@ -37,7 +42,7 @@ import env
 
 # ## Acquire
 
-# In[2]:
+# In[8]:
 
 
 def get_db_url(database):
@@ -86,25 +91,25 @@ def get_zillow():
        
 '''
     url = get_db_url('zillow')
-    zillow_df = pd.read_sql(sql, url, index_col='id')
-    return zillow_df
+    df = pd.read_sql(sql, url, index_col='id')
+    return df
 
 
-# In[3]:
+# In[31]:
 
 
-df = get_zillow()
+# df = get_zillow()
 
 
-# In[4]:
+# In[30]:
 
 
-df.head()
+# df.head()
 
 
 # ## Prepare
 
-# In[15]:
+# In[11]:
 
 
 # a function to drop missing values based on a threshold
@@ -124,7 +129,7 @@ def handle_missing_values(df, prop_required_row = 0.5, prop_required_col = 0.5):
     return df
 
 
-# In[13]:
+# In[12]:
 
 
 def wrangle_zillow():
@@ -143,7 +148,7 @@ def wrangle_zillow():
     df = handle_missing_values(df)
    
     # drop unnecessary columns
-    df = df.drop(columns=['calculatedbathnbr', 'finishedsquarefeet12', 'fullbathcnt', 'heatingorsystemtypeid', 'propertyzoningdesc', 'censustractandblock','propertycountylandusecode', 'propertylandusetypeid', 'propertylandusedesc', 'unitcnt','heatingorsystemdesc'])
+    df = df.drop(columns=['id','calculatedbathnbr', 'finishedsquarefeet12', 'fullbathcnt', 'heatingorsystemtypeid', 'propertyzoningdesc', 'censustractandblock','propertycountylandusecode', 'propertylandusetypeid', 'propertylandusedesc', 'unitcnt','heatingorsystemdesc'])
     
     # drop null rows for specific columns only
     df = df[df.regionidzip.notnull()]
@@ -180,11 +185,71 @@ def wrangle_zillow():
     
 
 
+# In[32]:
+
+
+# df = wrangle_zillow()
+# df.head()
+
+
+# ## Split
+
 # In[14]:
 
 
-df = wrangle_zillow()
-df.head()
+def split_data(df):
+    # train/validate/test split
+    # splits the data for modeling and exploring, to prevent overfitting
+    train_validate, test = train_test_split(df, test_size=.2, random_state=123)
+    train, validate = train_test_split(train_validate, test_size=.3, random_state=123)
+    
+    # Use train only to explore and for fitting
+    # Only use validate to validate models after fitting on train
+    # Only use test to test best model 
+    return train, validate, test 
+
+
+# In[33]:
+
+
+# train, validate, test = split_data(df)
+
+
+# In[27]:
+
+
+# train.head()
+
+
+# ## Scale
+
+# In[19]:
+
+
+def min_max_scaler(train, valid, test):
+    '''
+    Uses the train & test datasets created by the split_my_data function
+    Returns 3 items: mm_scaler, train_scaled_mm, test_scaled_mm
+    This is a linear transformation. Values will lie between 0 and 1
+    '''
+    num_vars = list(train.select_dtypes('number').columns)
+    scaler = MinMaxScaler(copy=True, feature_range=(0,1))
+    train[num_vars] = scaler.fit_transform(train[num_vars])
+    valid[num_vars] = scaler.transform(valid[num_vars])
+    test[num_vars] = scaler.transform(test[num_vars])
+    return scaler, train, valid, test
+
+
+# In[34]:
+
+
+# scaler, train_scaled, validate_scaled, test_scaled = min_max_scaler(train, validate, test)
+
+
+# In[25]:
+
+
+# train_scaled.head()
 
 
 # In[ ]:
